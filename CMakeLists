@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.19.6)
+
+set(CMAKE_VERBOSE_MAKEFILE_true)
+set(VERSION ${CMAKE_VERSION})
+set(CMAKE_MACOSX_RPAH 1)
+project(spmtrx CXX)
+add_subdirectory(src)
+
