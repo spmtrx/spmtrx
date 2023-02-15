@@ -45,7 +45,7 @@ namespace spm {
 			spmcrs diag_adjacency();
 			spmcrs inv_diag_adjacency();
 			spmcrs sqrt_inv_diag_adjacency();
-			spmcrs npmi(double threshold);
+			//spmcrs npmi(double threshold);
 			double trace();
 			double self_dot_prod(unsigned int i, unsigned int j);
 			void set(unsigned int col, double v);

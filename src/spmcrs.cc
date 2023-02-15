@@ -39,6 +39,17 @@ void spmcrs::cr() {
 	_row->push_back(_data->size());
 }
 
+void spmcrs::dump() {
+	auto i = 0;
+	for (auto it = begin(); it != end(); ++it, ++i) {
+		for (auto j = *it; j != *(it+1); ++j) {
+			cout << i << "," << (*_col)[j] << ":" << (*_data)[j] << "\t";
+		}
+		if (*it != *(it+1))
+			cout << endl;
+	}
+}
+
 vector<int>::iterator spmcrs::begin() {
 	return _row->begin();
 }
@@ -114,7 +125,7 @@ spmcrs spmcrs::transpose() {
 	t._row->resize(_colsize+1);
 	t._colsize = _row->size();
 
-	vector<int> t_non_zero_in_row(_colsize,0);
+	vector<int> t_non_zero_in_row(_colsize+1,0);
 	for (auto i = 0; i < _data->size(); ++i) {
 		t_non_zero_in_row[(*_col)[i]]++;
 	}
@@ -123,9 +134,8 @@ spmcrs spmcrs::transpose() {
 		n += t_non_zero_in_row[i];
 	}
 	vector<int> count(_colsize,0);
-	auto it = _row->begin();
-	auto end = _row->end();
-	for (auto i = 0; it != end; ++it, ++i) {
+	auto it = begin();
+	for (auto i = 0; it != end(); ++it, ++i) {
 		for (auto j = *it; j < *(it+1); ++j) {
 			int t_id = (*t._row)[(*_col)[j]]+count[(*_col)[j]]++;
 			(*t._data)[t_id] = (*_data)[j];
@@ -185,26 +195,6 @@ spmcrs spmcrs::sqrt_inv_diag_adjacency() {
 	spmcrs e = ones(t._colsize);
 	spmcrs a = *this*(t*e);
 	return a.sqrt_inv_diag();
-}
-
-spmcrs spmcrs::npmi(double threshold) {
-	spmcrs npmi;
-
-	spmcrs d = diag();
-	double n = d.trace();
-	spmcrs d_t = transpose().diag();
-	auto i = 0;
-	for (auto it = begin(); it != end(); ++it, ++i) {
-		for (auto j = *it; j < *(it+1); ++j) {
-			auto col = (*_col)[j];
-			double v = (log((*_data)[j])+log(n)-log(d.get_val(i, i))-log(d_t.get_val(col, col))) / (-log((*_data)[j])+log(n));
-			if (v >= threshold && v != 0.) {
-				npmi.set(col, v);
-			}
-		}
-		npmi.cr();
-	}
-	return npmi;
 }
 
 double spmcrs::trace() {
