@@ -1,8 +1,14 @@
 #include"spmtrx/spmcrs.h"
 #include<cstdlib>
+#include<iostream>
+#ifdef _OPENMP
+#include<omp.h>
+#endif
 
 using namespace std;
 using namespace spm;
+
+int spmcrs::_threads = 2;
 
 spmcrs::spmcrs(): _data(new vector<double>), _row(new vector<int>(1,0)), _col(new vector<int>), _colsize(0) {
 }
@@ -27,6 +33,15 @@ spmcrs::spmcrs(spmcrs&& a) noexcept {
 }
 
 spmcrs::~spmcrs() {
+}
+
+int spmcrs::set_thread_num(int t) {
+#ifdef _OPENMP
+	//_thread = min(t, omp_get_max_threads());
+	spmcrs::_threads = t;
+	omp_set_num_threads(spmcrs::_threads);
+#endif
+	return spmcrs::_threads;
 }
 
 void spmcrs::set(unsigned int col, double v) {
@@ -113,6 +128,9 @@ spmcrs spmcrs::ones(unsigned int size) {
 	unit._row->resize(size+1, 0);
 	unit._col->resize(size, 0);
 	unit._colsize = 1;
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
 	for (auto i = 0; i < size+1; ++i)
 		(*unit._row)[i] = i;
 	return unit;
@@ -147,14 +165,27 @@ spmcrs spmcrs::transpose() {
 
 spmcrs spmcrs::diag() {
 	spmcrs d;
+	vector<double> x(get_row_size(), 0);
 	auto it = begin();
-	for (auto i = 0; it != end(); ++i, ++it) {
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+	//for (auto i = 0; (it+i) != end(); ++i) {
+	for (auto i = 0; i < x.size(); ++i) {
 		double v = 0;
-		for (auto j = *it; j < *(it+1); ++j) {
+		for (auto j = *(it+i); j < *(it+i+1); ++j) {
 			v += (*_data)[j];
 		}
+		x[i] = v;
+/*
 		if (v != 0.)
 			d.set(i, v);
+		d.cr();
+*/
+	}
+	for (auto i = 0; i < x.size(); ++i) {
+		if (x[i] != 0.)
+			d.set(i, x[i]);
 		d.cr();
 	}
 	return d;
@@ -384,16 +415,28 @@ spmcrs& spmcrs::operator/=(double c) {
 }
 
 spmcrs spmcrs::operator*(spmcrs& a) {
+	if (a._colsize == 1)
+		return _dot_v(a);
 	spmcrs x;
-	auto it = begin();
-	for (auto i = 0; it != end(); ++it, ++i) {
+	for (auto it = begin(); it != end(); ++it) {
+		vector<double> y(a._colsize, 0.);
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
 		for (auto j = 0; j < a._colsize; ++j) {
 			double v = 0;
 			for (auto k = *it; k < *(it+1); ++k) {
 				v += (*_data)[k] * a.get_val((*_col)[k], j);
 			}
+			y[j] = v;
+/*
 			if (v != 0.)
 				x.set(j, v);
+*/
+		}
+		for (auto j = 0; j < a._colsize; ++j) {
+			if (y[j] != 0.)
+				x.set(j, y[j]);
 		}
 		x.cr();
 	}
@@ -412,4 +455,25 @@ spmcrs& spmcrs::operator*=(spmcrs& a) {
 spmcrs& spmcrs::operator*=(spmcrs&& a) {
 	*this = *this*a;
 	return *this;
+}
+
+spmcrs spmcrs::_dot_v(spmcrs& v) {
+	spmcrs x;
+	vector<double> r(get_row_size(),0);
+
+	auto it = begin();
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+	for (auto i = 0; i < get_row_size(); ++i) {
+		for (auto k = *(it+i); k < *(it+i+1); ++k) {
+			r[i] += (*_data)[k] * v.get_val((*_col)[k], 0);
+		}
+	}
+	for (auto j = 0; j < r.size(); ++j) {
+		if (r[j] != 0.)
+			x.set(0, r[j]);
+		x.cr();
+	}
+	return x;
 }

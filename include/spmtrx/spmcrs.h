@@ -37,6 +37,7 @@ namespace spm {
 			double get_val(unsigned int row, unsigned int col);
 			int get_row_size();
 			int get_col_size();
+			static int set_thread_num(int t);
 			spmcrs ones(unsigned int size);
 			spmcrs transpose();
 			spmcrs diag();
@@ -60,6 +61,8 @@ namespace spm {
 			std::shared_ptr<std::vector<int> > _row;
 			std::shared_ptr<std::vector<int> > _col;
 			int _colsize;
+			static int _threads;
+			spmcrs _dot_v(spmcrs& v);
 		private:
 			friend class boost::serialization::access;
 			template<class Archive>
