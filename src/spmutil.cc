@@ -1,4 +1,5 @@
 #include"spmtrx/spmutil.h"
+#include<cmath>
 #include<string>
 #include<fstream>
 #include<algorithm>

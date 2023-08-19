@@ -1,5 +1,6 @@
 #include"spmtrx/spmcrs.h"
 #include<cstdlib>
+#include<cmath>
 #include<iostream>
 #ifdef _OPENMP
 #include<omp.h>
